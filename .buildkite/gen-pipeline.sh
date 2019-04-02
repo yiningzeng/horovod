@@ -117,39 +117,47 @@ for test in ${tests[@]}; do
     queue=gpu
   fi
 
+  # convenience templates
+  if [[ ${queue} == "gpu" ]]; then
+    SET_CUDA_VISIBLE_DEVICES="\$(if [[ \${BUILDKITE_AGENT_NAME} == *\"-1\" ]]; then echo \"0,1,2,3\"; else echo \"4,5,6,7\"; fi)"
+  else
+    SET_CUDA_VISIBLE_DEVICES=""
+  fi
+  MPIRUN_COMMAND="\$(cat /mpirun_command)"
+
   run_test "${test}" "${queue}" \
     ":pytest: Run PyTests (${test})" \
-    "bash -c \"cd /horovod/test && (echo test_*.py | xargs -n 1 \\\$(cat /mpirun_command) pytest -v --capture=no)\""
+    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} && cd /horovod/test && (echo test_*.py | xargs -n 1 \\\$(cat /mpirun_command) pytest -v --capture=no)\""
 
   run_test "${test}" "${queue}" \
     ":muscle: Test TensorFlow MNIST (${test})" \
-    "bash -c \"\\\$(cat /mpirun_command) python /horovod/examples/tensorflow_mnist.py\""
+    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/examples/tensorflow_mnist.py\""
 
   if [[ ${test} != *"tf1_1_0"* && ${test} != *"tf1_6_0"* ]]; then
     run_test "${test}" "${queue}" \
       ":muscle: Test TensorFlow Eager MNIST (${test})" \
-      "bash -c \"\\\$(cat /mpirun_command) python /horovod/examples/tensorflow_mnist_eager.py\""
+      "bash -c \"${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/examples/tensorflow_mnist_eager.py\""
   fi
 
   run_test "${test}" "${queue}" \
     ":muscle: Test Keras MNIST (${test})" \
-    "bash -c \"\\\$(cat /mpirun_command) python /horovod/examples/keras_mnist_advanced.py\""
+    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/examples/keras_mnist_advanced.py\""
 
   run_test "${test}" "${queue}" \
     ":muscle: Test PyTorch MNIST (${test})" \
-    "bash -c \"\\\$(cat /mpirun_command) python /horovod/examples/pytorch_mnist.py\""
+    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/examples/pytorch_mnist.py\""
 
   run_test "${test}" "${queue}" \
     ":muscle: Test MXNet MNIST (${test})" \
-    "bash -c \"OMP_NUM_THREADS=1 \\\$(cat /mpirun_command) python /horovod/examples/mxnet_mnist.py\""
+    "bash -c \"OMP_NUM_THREADS=1 ${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/examples/mxnet_mnist.py\""
 
   run_test "${test}" "${queue}" \
     ":muscle: Test Stall (${test})" \
-    "bash -c \"\\\$(cat /mpirun_command) python /horovod/test/test_stall.py\""
+    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} ${MPIRUN_COMMAND} python /horovod/test/test_stall.py\""
 
   if [[ ${test} == *"openmpi"* ]]; then
     run_test "${test}" "${queue}" \
       ":muscle: Test Horovodrun (${test})" \
-      "horovodrun -np 2 -H localhost:2 python /horovod/examples/tensorflow_mnist.py"
+      "bash -c \"${SET_CUDA_VISIBLE_DEVICES} horovodrun -np 2 -H localhost:2 python /horovod/examples/tensorflow_mnist.py\""
   fi
 done
