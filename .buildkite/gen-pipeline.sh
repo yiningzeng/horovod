@@ -119,7 +119,7 @@ for test in ${tests[@]}; do
 
   # convenience templates
   if [[ ${queue} == "gpu" ]]; then
-    SET_CUDA_VISIBLE_DEVICES="\$(if [[ \${BUILDKITE_AGENT_NAME} == *\"-1\" ]]; then echo \"0,1,2,3\"; else echo \"4,5,6,7\"; fi)"
+    SET_CUDA_VISIBLE_DEVICES="CUDA_VISIBLE_DEVICES=\$(if [[ \${BUILDKITE_AGENT_NAME} == *\"-1\" ]]; then echo \"0,1,2,3\"; else echo \"4,5,6,7\"; fi)"
   else
     SET_CUDA_VISIBLE_DEVICES=""
   fi
@@ -127,7 +127,7 @@ for test in ${tests[@]}; do
 
   run_test "${test}" "${queue}" \
     ":pytest: Run PyTests (${test})" \
-    "bash -c \"${SET_CUDA_VISIBLE_DEVICES} && cd /horovod/test && (echo test_*.py | xargs -n 1 \\\$(cat /mpirun_command) pytest -v --capture=no)\""
+    "bash -c \"cd /horovod/test && (echo test_*.py | ${SET_CUDA_VISIBLE_DEVICES} xargs -n 1 ${MPIRUN_COMMAND} pytest -v --capture=no)\""
 
   run_test "${test}" "${queue}" \
     ":muscle: Test TensorFlow MNIST (${test})" \
